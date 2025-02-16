@@ -10,6 +10,7 @@ llm = OpenAI()
 def knowledge_base_agent(state: Dict):
     messages = state["messages"]
     last_message = messages[-1].content
+    print("state knowledge_base_agent=>", state["messages"])
 
     # Search knowledge base
     kb_results = search_knowledge_base(last_message)
