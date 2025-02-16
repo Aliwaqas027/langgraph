@@ -1,44 +1,61 @@
-from typing import Dict
-from langchain_core.messages import HumanMessage
-from langchain_openai import OpenAI
+from typing import Literal
+from typing_extensions import TypedDict
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END
+from langgraph.types import Command
+import logging
 
-# Initialize LLM
-llm = OpenAI()
+logger = logging.getLogger(__name__)
 
 
-def supervisor_agent(state: Dict):
-    """
-    Determines which agent should handle the query.
-    Returns: Dict with agent_type key
-    """
-    messages = state["messages"]
-    user_input = messages[-1].content if messages else ""
+class Router(TypedDict):
+    """Worker to route to next. If no workers needed, route to FINISH."""
+    next: Literal["researcher", "coder", "FINISH"]
 
-    system_prompt = """You are a supervisor agent that determines which specialized agent should handle a query.
-    Options are:
-    1. 'google' - For current events, factual queries needing web search
-    2. 'knowledge_base' - For company-specific or domain-specific information
-    3. 'llm' - For general conversation, opinions, or creative tasks
+
+class SupervisorService:
+    def __init__(self, model="gpt-4o"):
+        self.llm = ChatOpenAI(model=model, temperature=0)
+
+    def create_supervisor_node(self):
+        """Creates the supervisor node for routing."""
+        system_prompt = """You are a supervisor tasked with managing a conversation between four workers:
+        
+        - researcher: For finding information and facts using Google search
+        - backend: For backend related information and queries
+        - frontend: For frontend related information and queries
+        - designer: For design related information and queries
     
-    Respond only with one of these options: 'google', 'knowledge_base', or 'llm'.
-    Note: no other even a single word only respond with 'google', 'knowledge_base', or 'llm'.
-    
-    Example:
-    User: "What is the capital of France?"
-    google
-    
-    User: "Can you tell me about our company's policy?"
-    knowledge_base
-    
-    User: "Write me a poem about the ocean."
-    llm
-    """
+        
+        Important: Check the conversation history - if an agent has already provided their part,
+        move to the next needed agent or FINISH if all tasks are complete."""
 
-    messages = [
-        HumanMessage(content=system_prompt),
-        HumanMessage(content=f"Please decide which agent should handle this query: {user_input}")
-    ]
+        def supervisor_node(state):
+            try:
+                # Format messages for LLM
+                messages = [
+                               {"role": "system", "content": system_prompt},
+                           ] + state["messages"]
 
-    response = llm.invoke(messages)
-    print("response==>",response.strip().lower())
-    return {"agent_type": response.strip().lower()}
+                logger.info("Supervisor processing request")
+
+                # Get routing decision
+                response = self.llm.with_structured_output(Router).invoke(messages)
+                goto = response["next"]
+
+                logger.info(f"Supervisor decision: {goto}")
+
+                if goto == "FINISH":
+                    goto = END
+
+                # Return command with next step
+                return Command(
+                    goto=goto,
+                    update={"next": goto}
+                )
+
+            except Exception as e:
+                logger.error(f"Error in supervisor node: {str(e)}")
+                raise
+
+        return supervisor_node
