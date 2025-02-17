@@ -19,7 +19,7 @@ search = GoogleSearchAPIWrapper(
 )
 
 # Initialize Pinecone with embeddings
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+embeddings = OpenAIEmbeddings(model="text-embedding-ada-002text-ada-002")
 
 pc = Pinecone(api_key=pinecone_config.api_key)
 index = pc.Index(pinecone_config.index_name)

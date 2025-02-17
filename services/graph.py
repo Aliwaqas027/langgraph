@@ -123,10 +123,6 @@ class GraphService:
 
             # Add edges
             builder.add_edge(START, "supervisor")
-            builder.add_edge("researcher", "supervisor")
-            builder.add_edge("backend", "supervisor")
-            builder.add_edge("designer", "supervisor")
-            builder.add_edge("frontend", "supervisor")
 
             # Compile graph
             self.graph = builder.compile()
@@ -149,7 +145,7 @@ class GraphService:
 
             # Process through graph
             final_state = self.graph.invoke(state)
-            logger.info("Graph processing complete")
+            logger.info(f"Graph processing complete")
 
             # Extract final answer
             messages = final_state["messages"]
@@ -157,9 +153,9 @@ class GraphService:
 
             for msg in messages:
                 if hasattr(msg, 'name') and msg.name in ['researcher', 'backend', 'frontend', 'designer']:
-                    responses.append(f"{msg.name.capitalize()}: {msg.content}")
+                    responses.append(f"{msg.content}")
 
-            return "\n\n".join(responses) if responses else "No response generated"
+            return responses[len(responses) - 1] if responses else "No response generated"
 
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")
