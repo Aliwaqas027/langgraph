@@ -14,19 +14,20 @@ class State(MessagesState):
 
 
 class GraphService:
-    def __init__(self, supervisor_service, research_agent, code_agent, frontend_agent, designer_agent):
+    def __init__(self, supervisor_service, research_agent, code_agent, frontend_agent, designer_agent, response):
         self.supervisor = supervisor_service
         self.research_agent = research_agent
         self.code_agent = code_agent
         self.frontend_agent = frontend_agent
         self.designer_agent = designer_agent
+        self.response_agent = response
         self.graph = None
 
     def create_research_node(self):
         """Creates the researcher node."""
 
         def research_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info("Executing research node")
+            logger.info(f"Executing research node {state}")
             try:
                 result = self.research_agent.invoke(state)
                 logger.info(f"Research result: {result['messages'][-1].content[:100]}...")
@@ -48,7 +49,7 @@ class GraphService:
         """Creates the backend node."""
 
         def code_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info("Executing backend node")
+            logger.info(f"Executing backend node {state}")
             try:
                 result = self.code_agent.invoke(state)
                 logger.info(f"Backend result: {result['messages'][-1].content[:100]}...")
@@ -69,7 +70,7 @@ class GraphService:
     def create_fe_node(self):
 
         def fe_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info("Executing frontend node")
+            logger.info(f"Executing frontend node {state}")
             try:
                 result = self.frontend_agent.invoke(state)
                 logger.info(f"Frontend result: {result['messages'][-1].content[:100]}...")
@@ -90,7 +91,7 @@ class GraphService:
     def create_design_node(self):
 
         def design_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info("Executing designer node")
+            logger.info(f"Executing designer node {state}")
             try:
                 result = self.designer_agent.invoke(state)
                 logger.info(f"Designer result: {result['messages'][-1].content[:100]}...")
@@ -149,13 +150,18 @@ class GraphService:
 
             # Extract final answer
             messages = final_state["messages"]
-            responses = []
+            print("messages final state:", messages)
+            responses = ''
 
             for msg in messages:
                 if hasattr(msg, 'name') and msg.name in ['researcher', 'backend', 'frontend', 'designer']:
-                    responses.append(f"{msg.content}")
+                    responses += f"{msg.content}"
 
-            return responses[len(responses) - 1] if responses else "No response generated"
+            result = self.response_agent.invoke({
+                'messages': [HumanMessage(content=responses)]
+            })
+            print("results from response_agent", result)
+            return result['messages'][-1].content if result["messages"] else "No response generated"
 
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")

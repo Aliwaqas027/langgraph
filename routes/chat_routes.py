@@ -6,6 +6,7 @@ from agents.backend_agent import se_agent
 from agents.frontend_agent import fe_agent
 from agents.designer_agent import design_agent
 from agents.supervisor import SupervisorService
+from agents.response_agent import response_agent
 from services.graph import GraphService
 
 
@@ -23,7 +24,8 @@ def get_graph_service() -> GraphService:
         frontend_agent = fe_agent()
         designer_agent = design_agent()
         supervisor = SupervisorService()
-        return GraphService(supervisor, research_agent, backend_agent, frontend_agent, designer_agent)
+        response = response_agent()
+        return GraphService(supervisor, research_agent, backend_agent, frontend_agent, designer_agent, response)
     except Exception as e:
         logger.error(f"Error initializing graph service: {str(e)}")
         raise
