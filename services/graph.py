@@ -1,7 +1,7 @@
-from typing import Literal
+from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
-from langchain_core.messages import HumanMessage
-from langgraph.types import Command
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.prebuilt import ToolNode
 
 import logging
 
@@ -14,100 +14,46 @@ class State(MessagesState):
 
 
 class GraphService:
-    def __init__(self, supervisor_service, research_agent, code_agent, frontend_agent, designer_agent, response):
-        self.supervisor = supervisor_service
-        self.research_agent = research_agent
-        self.code_agent = code_agent
-        self.frontend_agent = frontend_agent
-        self.designer_agent = designer_agent
-        self.response_agent = response
+    def __init__(self, Tools=None):
         self.graph = None
+        self.tools = Tools
+        AGENT_MODEL = "gpt-4o"
+        self._tools_llm = ChatOpenAI(
+            model=AGENT_MODEL,
+            temperature=0,
+        ).bind_tools(Tools)
 
-    def create_research_node(self):
-        """Creates the researcher node."""
+    @staticmethod
+    def route_next_step(state: State):
+        result = state["messages"][-1]
+        if len(result.tool_calls) != 0:
+            return "invoke_tools"
+        return END
 
-        def research_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info(f"Executing research node {state}")
-            try:
-                result = self.research_agent.invoke(state)
-                logger.info(f"Research result: {result['messages'][-1].content[:100]}...")
-                return Command(
-                    update={
-                        "messages": [
-                            HumanMessage(content=result["messages"][-1].content, name="researcher")
-                        ]
-                    },
-                    goto="supervisor"
-                )
-            except Exception as e:
-                logger.error(f"Error in research node: {str(e)}")
-                raise
+    async def call_tools_llm(self, state: State):
+        try:
+            messages = state["messages"]
 
-        return research_node
+            system_prompt = """You are a supervisor tasked with managing a conversation between four workers:
+        
+            - researcher: For finding information and facts using Google search
+            - backend: For backend related information and queries
+            - frontend: For frontend related information and queries
+            - designer: For design related information and queries
+        
+            
+            Important: Check the conversation history - if an agent has already provided their part,
+            move to the next needed agent or FINISH if all tasks are complete."""
 
-    def create_code_node(self):
-        """Creates the backend node."""
+            messages_with_system = [SystemMessage(content=system_prompt)] + messages
 
-        def code_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info(f"Executing backend node {state}")
-            try:
-                result = self.code_agent.invoke(state)
-                logger.info(f"Backend result: {result['messages'][-1].content[:100]}...")
-                return Command(
-                    update={
-                        "messages": [
-                            HumanMessage(content=result["messages"][-1].content, name="backend")
-                        ]
-                    },
-                    goto="supervisor"
-                )
-            except Exception as e:
-                logger.error(f"Error in code node: {str(e)}")
-                raise
+            message = await self._tools_llm.ainvoke(messages_with_system)
 
-        return code_node
+            return {"messages": [message]}
 
-    def create_fe_node(self):
-
-        def fe_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info(f"Executing frontend node {state}")
-            try:
-                result = self.frontend_agent.invoke(state)
-                logger.info(f"Frontend result: {result['messages'][-1].content[:100]}...")
-                return Command(
-                    update={
-                        "messages": [
-                            HumanMessage(content=result["messages"][-1].content, name="frontend")
-                        ]
-                    },
-                    goto="supervisor"
-                )
-            except Exception as e:
-                logger.error(f"Error in fe_node node: {str(e)}")
-                raise
-
-        return fe_node
-
-    def create_design_node(self):
-
-        def design_node(state: State) -> Command[Literal["supervisor"]]:
-            logger.info(f"Executing designer node {state}")
-            try:
-                result = self.designer_agent.invoke(state)
-                logger.info(f"Designer result: {result['messages'][-1].content[:100]}...")
-                return Command(
-                    update={
-                        "messages": [
-                            HumanMessage(content=result["messages"][-1].content, name="designer")
-                        ]
-                    },
-                    goto="supervisor"
-                )
-            except Exception as e:
-                logger.error(f"Error in design node: {str(e)}")
-                raise
-
-        return design_node
+        except Exception as e:
+            print("error in call tools llm", e)
+            raise e
 
     def create_graph(self):
         """Creates and compiles the workflow graph."""
@@ -115,25 +61,21 @@ class GraphService:
             # Create graph with state
             builder = StateGraph(State)
 
-            # Add nodes
-            builder.add_node("supervisor", self.supervisor.create_supervisor_node())
-            builder.add_node("researcher", self.create_research_node())
-            builder.add_node("backend", self.create_code_node())
-            builder.add_node("designer", self.create_design_node())
-            builder.add_node("frontend", self.create_fe_node())
+            builder.add_node("call_tools_llm", self.call_tools_llm)
+            builder.add_node("invoke_tools", ToolNode(self.tools))
 
-            # Add edges
-            builder.add_edge(START, "supervisor")
+            builder.set_entry_point("call_tools_llm")
 
-            # Compile graph
+            builder.add_conditional_edges("call_tools_llm", self.route_next_step)
+
+            # Compile the graph with tracing disabled
             self.graph = builder.compile()
-            logger.info("Graph created successfully")
 
         except Exception as e:
             logger.error(f"Error creating graph: {str(e)}")
             raise
 
-    def process_query(self, query: str) -> str:
+    async def process_query(self, query: str) -> str:
         """Process a query through the graph."""
         try:
             if not self.graph:
@@ -145,23 +87,14 @@ class GraphService:
             logger.info(f"Initial state created with query: {query}")
 
             # Process through graph
-            final_state = self.graph.invoke(state)
+            final_state = await self.graph.ainvoke(state)
             logger.info(f"Graph processing complete")
 
             # Extract final answer
             messages = final_state["messages"]
             print("messages final state:", messages)
-            responses = ''
 
-            for msg in messages:
-                if hasattr(msg, 'name') and msg.name in ['researcher', 'backend', 'frontend', 'designer']:
-                    responses += f"{msg.content}"
-
-            result = self.response_agent.invoke({
-                'messages': [HumanMessage(content=responses)]
-            })
-            print("results from response_agent", result)
-            return result['messages'][-1].content if result["messages"] else "No response generated"
+            return final_state['messages'][-1].content if final_state["messages"] else "No response generated"
 
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")

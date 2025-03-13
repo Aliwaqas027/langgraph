@@ -2,15 +2,17 @@ from langchain_core.tools import tool
 from langchain_google_community import GoogleSearchAPIWrapper
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
-from langchain_openai import OpenAIEmbeddings
-from langchain_openai import OpenAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from utils.config import google_config, pinecone_config, azure_config
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize LLM
-llm = OpenAI()
+AGENT_MODEL = "gpt-4o"
+llm = ChatOpenAI(
+    model=AGENT_MODEL,
+    temperature=0,
+)
 
 # Initialize Google Search
 search = GoogleSearchAPIWrapper(
@@ -26,7 +28,7 @@ index = pc.Index(pinecone_config.index_name)
 vectorstore = PineconeVectorStore(index=index, embedding=embeddings)
 
 
-@tool(return_direct=True)
+@tool
 def search_google(query: str) -> str:
     """Performs a Google search using the provided query and returns the results."""
     try:
@@ -91,3 +93,45 @@ def format_search_results(results: list) -> str:
     except Exception as e:
         logger.error(f"Error formatting results: {str(e)}")
         return str(results)  # Return raw results if formatting fails
+
+
+@tool
+def frontend_agent_tool(query: str) -> str:
+    """
+    Processes frontend development queries.
+    Used when the user asks about user interface design, client-side technologies, or frontend-specific implementation details.
+
+    Returns:
+       A detailed response with expert advice on frontend development.
+    """
+    messages = [("system", "You are a Frontend Development expert."), ("user", query)]
+    response = llm.invoke(messages)
+    return response.content
+
+
+@tool
+def backend_agent_tool(query: str) -> str:
+    """
+    Processes backend development queries.
+    Used when the user asks about server-side programming, database management, or backend architecture.
+
+    Returns:
+       A detailed response with expert advice on backend development.
+    """
+    messages = [("system", "You are a Backend Development expert."), ("user", query)]
+    response = llm.invoke(messages)
+    return response.content
+
+
+@tool
+def designer_agent_tool(query: str) -> str:
+    """
+    Processes design-related queries.
+    Used when the user asks about user experience, graphic design, or interface aesthetics.
+
+    Returns:
+       A detailed response with expert advice on design and user experience.
+    """
+    messages = [("system", "You are a Design expert."), ("user", query)]
+    response = llm.invoke(messages)
+    return response.content
