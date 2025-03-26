@@ -34,11 +34,8 @@ async def chat() -> tuple[Response, int] | Response:
             }), 400
         logger.info(f"Received chat request: {data['message']}")
         response = await graph_service.process_query(data['message'])
-        logger.info(f"Generated response for query: {response[:100]}...")
 
-        return jsonify({
-            'response': response
-        })
+        return jsonify(response)
 
     except Exception as e:
         # Log error

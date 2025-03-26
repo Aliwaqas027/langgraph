@@ -23,10 +23,12 @@ def create_app():
     # Error handlers
     @app.errorhandler(404)
     def not_found(e):
+        print("errorhandler ==>", e)
         return {"error": "Resource not found", "status": "error"}, 404
 
     @app.errorhandler(500)
     def server_error(e):
+        print("errorhandler ==>", e)
         return {"error": "Internal server error", "status": "error"}, 500
 
     return app

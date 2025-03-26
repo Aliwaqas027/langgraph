@@ -1,3 +1,5 @@
+from typing import Dict, Any, List
+
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -27,6 +29,7 @@ class GraphService:
     def route_next_step(state: State):
         result = state["messages"][-1]
         if len(result.tool_calls) != 0:
+            print("result.tool_calls", result.tool_calls)
             return "invoke_tools"
         return END
 
@@ -75,7 +78,7 @@ class GraphService:
             logger.error(f"Error creating graph: {str(e)}")
             raise
 
-    async def process_query(self, query: str) -> str:
+    async def process_query(self, query: str) -> dict[str, str | list[Any] | Any] | str:
         """Process a query through the graph."""
         try:
             if not self.graph:
@@ -94,7 +97,21 @@ class GraphService:
             messages = final_state["messages"]
             print("messages final state:", messages)
 
-            return final_state['messages'][-1].content if final_state["messages"] else "No response generated"
+            messages = final_state['messages']
+
+            final_answer = messages[-1].content if messages else "No response generated"
+
+            used_tools = []
+            for msg in messages:
+                if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                    for tool_call in msg.tool_calls:
+                        if tool_call['name'] not in used_tools:
+                            used_tools.append(tool_call['name'])
+
+            return {
+                'final_answer': final_answer,
+                'used_tools': used_tools
+            }
 
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")
