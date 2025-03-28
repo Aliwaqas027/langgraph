@@ -43,6 +43,7 @@ class GraphService:
             - backend: For backend related information and queries
             - frontend: For frontend related information and queries
             - designer: For design related information and queries
+            - legal: For legal queries
         
             
             Important: Check the conversation history - if an agent has already provided their part,

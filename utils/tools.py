@@ -40,26 +40,6 @@ def search_google(query: str) -> str:
 
 
 @tool(return_direct=True)
-def search_knowledge_base(query: str) -> str:
-    """Searches the knowledge base for relevant information based on the provided query."""
-    try:
-        results = vectorstore.similarity_search(query, k=2)
-
-        if not results:
-            return "No relevant information found in knowledge base."
-
-        formatted_results = []
-        for i, doc in enumerate(results, 1):
-            formatted_results.append(f"Document {i}:\n{doc.page_content}\n")
-
-        return "\n".join(formatted_results)
-
-    except Exception as e:
-        logger.error(f"Knowledge base search error: {str(e)}")
-        return f"Error searching knowledge base: {str(e)}"
-
-
-@tool(return_direct=True)
 def combine_search_results(query: str) -> str:
     """Combines results from both Google search and knowledge base search."""
     try:
@@ -135,3 +115,29 @@ def designer_agent_tool(query: str) -> str:
     messages = [("system", "You are a Design expert."), ("user", query)]
     response = llm.invoke(messages)
     return response.content
+
+
+@tool
+def legal_knowledge_base(query: str) -> str:
+    """
+    Processes legal-related queries and give relevant knowledge base.
+    Used when the user asks about legal, terms, or clauses.
+
+    Returns:
+       A detailed context of knowledge base.
+    """
+    try:
+        results = vectorstore.similarity_search(query, k=2)
+
+        if not results:
+            return "No relevant information found in knowledge base."
+
+        formatted_results = []
+        for i, doc in enumerate(results, 1):
+            formatted_results.append(f"Document {i}:\n{doc.page_content}\n")
+
+        return "\n".join(formatted_results)
+
+    except Exception as e:
+        logger.error(f"Knowledge base search error: {str(e)}")
+        return f"Error searching knowledge base: {str(e)}"
