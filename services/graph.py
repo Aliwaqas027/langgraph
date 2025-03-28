@@ -44,6 +44,7 @@ class GraphService:
             - frontend: For frontend related information and queries
             - designer: For design related information and queries
             - legal: For legal queries
+            - finance: For finance related queries
         
             
             Important: Check the conversation history - if an agent has already provided their part,

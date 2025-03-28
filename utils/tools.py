@@ -118,25 +118,53 @@ def designer_agent_tool(query: str) -> str:
 
 
 @tool
-def legal_knowledge_base(query: str) -> str:
+def legal_expert(query: str) -> str:
     """
-    Processes legal-related queries and give relevant knowledge base.
+    Processes legal-related queries and give relevant answer from knowledge base.
     Used when the user asks about legal, terms, or clauses.
 
     Returns:
-       A detailed context of knowledge base.
+       A detailed answer from knowledge base.
     """
     try:
         results = vectorstore.similarity_search(query, k=2)
-
-        if not results:
-            return "No relevant information found in knowledge base."
 
         formatted_results = []
         for i, doc in enumerate(results, 1):
             formatted_results.append(f"Document {i}:\n{doc.page_content}\n")
 
-        return "\n".join(formatted_results)
+        context = "\n".join(formatted_results)
+
+        messages = [("system", "You are a legal expert."), ("user", f"My question: {query}. Relevant knowledge base: {context}.")]
+        response = llm.invoke(messages)
+        return response.content
+
+    except Exception as e:
+        logger.error(f"Knowledge base search error: {str(e)}")
+        return f"Error searching knowledge base: {str(e)}"
+
+
+@tool
+def finance_expert(query: str) -> str:
+    """
+    Processes finance-related queries and give relevant answer from knowledge base.
+    Used when the user asks about finance.
+
+    Returns:
+       A detailed answer from knowledge base.
+    """
+    try:
+        results = vectorstore.similarity_search(query, k=2)
+
+        formatted_results = []
+        for i, doc in enumerate(results, 1):
+            formatted_results.append(f"Document {i}:\n{doc.page_content}\n")
+
+        context = "\n".join(formatted_results)
+
+        messages = [("system", "You are a finance expert."), ("user", f"My question: {query}. Relevant knowledge base: {context}.")]
+        response = llm.invoke(messages)
+        return response.content
 
     except Exception as e:
         logger.error(f"Knowledge base search error: {str(e)}")
