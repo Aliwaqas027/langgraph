@@ -26,6 +26,8 @@ embeddings = OpenAIEmbeddings(model="text-embedding-ada-002text-ada-002")
 pc = Pinecone(api_key=pinecone_config.api_key)
 index = pc.Index(pinecone_config.index_name)
 vectorstore = PineconeVectorStore(index=index, embedding=embeddings)
+legal_store = PineconeVectorStore(index='legal', embedding=embeddings)
+finance_store = PineconeVectorStore(index='finance', embedding=embeddings)
 
 
 @tool
@@ -37,30 +39,6 @@ def search_google(query: str) -> str:
     except Exception as e:
         logger.error(f"Google search error: {str(e)}")
         return f"Error performing Google search: {str(e)}"
-
-
-@tool(return_direct=True)
-def combine_search_results(query: str) -> str:
-    """Combines results from both Google search and knowledge base search."""
-    try:
-        google_results = search_google(query)
-        kb_results = search_knowledge_base(query)
-
-        combined = f"""
-        Google Search Results:
-        ---------------------
-        {google_results}
-        
-        Knowledge Base Results:
-        ---------------------
-        {kb_results}
-        """
-
-        return combined
-
-    except Exception as e:
-        logger.error(f"Combined search error: {str(e)}")
-        return f"Error combining search results: {str(e)}"
 
 
 def format_search_results(results: list) -> str:
@@ -127,7 +105,7 @@ def legal_expert(query: str) -> str:
        A detailed answer from knowledge base.
     """
     try:
-        results = vectorstore.similarity_search(query, k=2)
+        results = legal_store.similarity_search(query, k=2)
 
         formatted_results = []
         for i, doc in enumerate(results, 1):
@@ -154,7 +132,7 @@ def finance_expert(query: str) -> str:
        A detailed answer from knowledge base.
     """
     try:
-        results = vectorstore.similarity_search(query, k=2)
+        results = finance_store.similarity_search(query, k=2)
 
         formatted_results = []
         for i, doc in enumerate(results, 1):
