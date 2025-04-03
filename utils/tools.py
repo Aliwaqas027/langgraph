@@ -21,13 +21,17 @@ search = GoogleSearchAPIWrapper(
 )
 
 # Initialize Pinecone with embeddings
-embeddings = OpenAIEmbeddings(model="text-embedding-ada-002text-ada-002")
+embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
 
 pc = Pinecone(api_key=pinecone_config.api_key)
 index = pc.Index(pinecone_config.index_name)
+
+legal = pc.Index('legal')
+finance = pc.Index('finance')
+
 vectorstore = PineconeVectorStore(index=index, embedding=embeddings)
-legal_store = PineconeVectorStore(index='legal', embedding=embeddings)
-finance_store = PineconeVectorStore(index='finance', embedding=embeddings)
+legal_store = PineconeVectorStore(index=legal, embedding=embeddings)
+finance_store = PineconeVectorStore(index=finance, embedding=embeddings)
 
 
 @tool

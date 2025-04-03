@@ -2,6 +2,7 @@
 from flask import Flask
 from flask_cors import CORS
 from routes.chat_routes import chat_routes
+from routes.upload_routes import chat_routes as upload_routes
 import logging
 
 # Set up logging
@@ -19,6 +20,7 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(chat_routes, url_prefix='/api')
+    app.register_blueprint(upload_routes, url_prefix='/api')
 
     # Error handlers
     @app.errorhandler(404)
