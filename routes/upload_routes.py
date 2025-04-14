@@ -15,29 +15,29 @@ chat_routes = Blueprint('upload', __name__)
 
 # Initialize Pinecone
 pc = Pinecone(api_key=pinecone_config.api_key)
-index = pc.Index("finance")
+index = pc.Index("kb")
 
 
-def process_file_based_on_mime(file_path, metadata, doc_name):
+def process_file_based_on_mime(file_path, kb_type, doc_name):
     if file_path.lower().endswith('.pdf'):
-        upload_pdf(metadata, doc_name, os.path.dirname(file_path))
+        upload_pdf(kb_type, doc_name, os.path.dirname(file_path))
     else:
         logger.warning(f"Unsupported file type: {file_path}")
 
 
-def upload_pdf(meta_data, doc_name, directory_path):
+def upload_pdf(kb_type, doc_name, directory_path):
     try:
         # use the directory path for DirectoryLoader
         loader = PyPDFDirectoryLoader(directory_path, glob="*.pdf")
         docs = loader.load()
         print("docs", docs)
-        upload_documents(docs, meta_data, doc_name)
+        upload_documents(docs, kb_type, doc_name)
     except Exception as e:
         logger.error(f"Error uploading PDF: {str(e)}")
         raise
 
 
-def upload_documents(docs, meta_data, doc_name):
+def upload_documents(docs, kb_type, doc_name):
     try:
         for doc in docs:
             filename_with_extension = os.path.basename(doc.metadata["source"])
@@ -59,8 +59,8 @@ def upload_documents(docs, meta_data, doc_name):
                 chunk = chunks[idx]
                 metadata = {
                     "text": chunk.page_content,
-                    "type": meta_data.strip('\"'),
-                    "doc_link": str(doc_name)
+                    "type": kb_type,
+                    "doc_link": str(doc_name),
                 }
                 vector = {
                     "id": str(uuid.uuid4()),
@@ -84,9 +84,9 @@ async def upload() -> tuple[Response, int] | Response:
             return jsonify(error='Method not allowed'), 405
 
         uploaded_files = request.files.getlist('files')
-        metadata = request.form.get('type')
+        kb_type = request.form.get('type')
 
-        if not metadata:
+        if not kb_type:
             return jsonify(error='Type required!'), 400
         if not uploaded_files:
             return jsonify(error='No files part in the request'), 400
@@ -104,7 +104,7 @@ async def upload() -> tuple[Response, int] | Response:
                 f.save(upload_path)
 
                 files_path.append({"path": upload_path, "name": f.filename})
-                process_file_based_on_mime(upload_path, metadata, f.filename)
+                process_file_based_on_mime(upload_path, kb_type, f.filename)
                 os.remove(upload_path)
 
             return jsonify(message='Files uploaded and processed successfully.')

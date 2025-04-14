@@ -26,12 +26,10 @@ embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
 pc = Pinecone(api_key=pinecone_config.api_key)
 index = pc.Index(pinecone_config.index_name)
 
-legal = pc.Index('legal')
-finance = pc.Index('finance')
+kb = pc.Index('kb')
 
 vectorstore = PineconeVectorStore(index=index, embedding=embeddings)
-legal_store = PineconeVectorStore(index=legal, embedding=embeddings)
-finance_store = PineconeVectorStore(index=finance, embedding=embeddings)
+store = PineconeVectorStore(index=kb, embedding=embeddings)
 
 
 @tool
@@ -109,7 +107,7 @@ def legal_expert(query: str) -> str:
        A detailed answer from knowledge base.
     """
     try:
-        results = legal_store.similarity_search(query, k=2)
+        results = store.similarity_search(query, k=2, filter={"type": "finance"})
 
         formatted_results = []
         for i, doc in enumerate(results, 1):
@@ -136,7 +134,7 @@ def finance_expert(query: str) -> str:
        A detailed answer from knowledge base.
     """
     try:
-        results = finance_store.similarity_search(query, k=2)
+        results = store.similarity_search(query, k=2, filter={"type": "finance"})
 
         formatted_results = []
         for i, doc in enumerate(results, 1):
