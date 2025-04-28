@@ -2,8 +2,8 @@ from flask import Blueprint, request, jsonify, Response
 import logging
 
 from services.graph import GraphService
-from utils.tools import (frontend_agent_tool, backend_agent_tool, designer_agent_tool, search_google, legal_expert,
-                         finance_expert)
+from utils.tools import (search_google, ui_architect_tool, server_strategist_tool, systems_synthesizer_tool,
+                         pipeline_builder_tool, quality_guardian_tool, agile_orchestrator_tool, vision_driver_tool)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,8 +14,8 @@ chat_routes = Blueprint('chat', __name__)
 
 def get_graph_service() -> GraphService:
     try:
-        tools = [frontend_agent_tool, backend_agent_tool, designer_agent_tool, search_google, legal_expert,
-                 finance_expert]
+        tools = [search_google, ui_architect_tool, server_strategist_tool, systems_synthesizer_tool,
+                 pipeline_builder_tool, quality_guardian_tool, agile_orchestrator_tool, vision_driver_tool]
         return GraphService(tools)
     except Exception as e:
         logger.error(f"Error initializing graph service: {str(e)}")

@@ -40,12 +40,13 @@ class GraphService:
             system_prompt = """You are a supervisor tasked with managing a conversation between four workers:
         
             - researcher: For finding information and facts using Google search
-            - backend: For backend related information and queries
-            - frontend: For frontend related information and queries
-            - designer: For design related information and queries
-            - legal: For legal queries
-            - finance: For finance related queries
-        
+            - ui_architect: For frontend development, responsive interfaces, and user experience design
+            - server_strategist: For backend development, APIs, databases, and server-side logic
+            - systems_synthesizer: For full-stack development and end-to-end feature implementation
+            - pipeline_builder: For DevOps, infrastructure automation, and deployment workflows
+            - quality_guardian: For QA, testing strategies, and ensuring software quality
+            - agile_orchestrator: For project management, sprint coordination, and team productivity
+            - vision_driver: For product strategy, feature prioritization, and user-centered solutions
             
             Important: Check the conversation history - if an agent has already provided their part,
             move to the next needed agent or FINISH if all tasks are complete."""
