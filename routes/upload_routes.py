@@ -15,7 +15,7 @@ chat_routes = Blueprint('upload', __name__)
 
 # Initialize Pinecone
 pc = Pinecone(api_key=pinecone_config.api_key)
-index = pc.Index("kb")
+index = pc.Index("rfi")
 
 
 def process_file_based_on_mime(file_path, kb_type, doc_name):
