@@ -50,8 +50,6 @@ def search_knowledge_base(query: str) -> dict:
 
     Args:
         query: Search query
-        kb_type: Document type filter for the search
-
     Returns:
         Dictionary with content and file names separately. like this
         {
